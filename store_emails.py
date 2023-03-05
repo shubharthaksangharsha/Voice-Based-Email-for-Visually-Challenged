@@ -1,5 +1,6 @@
 import json 
 
+#predefined emails
 emails = { 
     'myself': 'shubharthaksangharsha@gmail.com', 
     'mummy': 'usharani20jan@gmail.com', 
@@ -10,11 +11,22 @@ emails = {
     'vinita': 'vinitarai948@gmail.com'
 }
 
-with open('all_emails.json', 'w') as f:
-    json.dump(emails, f)
+smtp_servers = {
+    'gmail': ('smtp.gmail.com', 465),
+    'outlook': ('smtp.office365.com', 587),
+    'yahoo': ('smtp.mail.yahoo.com', 465),
+    'cuchd' : ('smtp.office365.com', 587)
+}
 
-with open('all_emails.json', 'r') as f:
-    emails = json.load(f)
+def storeEmails(emails):
+    with open('all_emails.json', 'w') as f:
+        json.dump(emails, f)
 
+def readEmails():
+    with open('all_emails.json', 'r') as f:
+        emails = json.load(f)
+    return emails
 
+if __name__ == '__main__':
+    pass
 

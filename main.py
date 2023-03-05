@@ -4,7 +4,6 @@ import speech_recognition as sr
 import psutil as ps
 import threading
 import os
-import schedule
 import time 
 import datefinder
 import datetime
@@ -20,14 +19,19 @@ from email.mime import audio
 import email 
 from email.header import decode_header
 import json 
-
-
-#getting all the stored emails
-with open('all_emails.json', 'r') as f:
-    emails = json.load(f)
+from store_emails import readEmails, storeEmails, smtp_servers
 
 #converting text to speech 
 def speak(text):
+    """
+    Converts given text to speech using Google Text-to-Speech (gTTS) API, and plays the generated audio file.
+
+    Args:
+        text (str): The text to convert to speech.
+
+    Returns:
+        None
+    """
     speech = gTTS(text=text, lang="en-in", slow=False)
     speech.save("text.mp3")
     os.system("mpg123 text.mp3")
@@ -35,7 +39,10 @@ def speak(text):
 #greeting function
 def wishMe():
     '''
-    It wishes the User according the time and return the file which played using os.system()
+    This function greets the user based on the current time by playing an audio file using the os.system() method.
+
+    Returns:
+        None
     '''
     hour = int(datetime.datetime.now().hour)
     if hour >= 0 and hour < 12:
@@ -48,9 +55,20 @@ def wishMe():
 
 #take voice command from the user microphone and convert it into text 
 def takeCommand(pause_threshold = 0.6, timeout=5, phrase_time_limit=3):
-    '''
-    It takes microphone input from the user and returns string output
-    '''
+    """
+    This function listens to the user's voice input through the microphone and returns a string output.
+
+    Args:
+    pause_threshold (float): The minimum length of silence (in seconds) that is considered the end of a phrase.
+    timeout (int): The maximum number of seconds that the function will wait for speech before timing out and returning.
+    phrase_time_limit (int): The maximum number of seconds that this function will allow a phrase to continue before stopping and returning the first part of the speech recognized.
+
+    Returns:
+    str: The text of the speech recognized from the user's input.
+
+    Raises:
+    None
+    """
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("Listening...")
@@ -67,15 +85,25 @@ def takeCommand(pause_threshold = 0.6, timeout=5, phrase_time_limit=3):
 
 #sending mail 
 def sendEmail(to, content):
+    '''
+    This function sends an email to the specified recipient containing the provided content. It uses the email address and password stored in the operating system's environment variables to authenticate and connect to Gmail's SMTP server. The email's subject is set to "Mail From Voice Assistant" and the sender's email address is also set from the environment variables.
+    Params:
+        to: email address of the recipient
+        content: the message to be sent
+
+    Returns:
+        None
+    '''
     username = os.environ.get('mymail')
     password = os.environ.get('myapp_pass2')
+    domain = username.split('@')[1].split('.')[0]
+    server, port = smtp_servers.get(domain)
     msg = EmailMessage()
     msg['Subject'] = 'Mail From Voice Assistant'
     msg['From'] = username
-    #msg['To'] = username
     msg['To'] = to
     msg.set_content(content)
-    with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
+    with smtplib.SMTP_SSL(server, port) as smtp:
         smtp.login(username, password)
         smtp.send_message(msg)
         
@@ -210,25 +238,18 @@ def run(query):
     elif "send mail" in query or 'sendmail' in query:
                         try:
                             speak('To Who I should send this mail')
-                            answer = takeCommand().lower()
-                            if 'mummy' in answer:
-                                speak("What should I say")
-                                content = takeCommand().lower()
-                                to = emails['mummy']
-                                speak('Confirm me yes or no')
-                                answer = takeCommand().lower()
-                                if 'yes' in answer:
-                                    sendEmail(to, content)
-                                    speak('Email has been sent!')
-                                elif 'no' in answer:
-                                    speak('Okay')
-                                else:
-                                    speak('No response going back')
-                            elif 'bro' in answer:
-                                speak("What should I say")
+                            for i, name in enumerate(emails):
+                                print(i, name)
+                                if i == 5:
+                                    break
+                                speak(name)
+                            name = takeCommand().lower()
+                            if name in emails:
+                                to = emails[name]
+                                print(f'Sending mail to {name}')
+                                speak(f"What should I say to {name}")
                                 content = takeCommand()
-                                to = emails['bro']
-                                speak('Confirm me yes or no')
+                                speak("Confirm me yes or no")
                                 answer = takeCommand().lower()
                                 if 'yes' in answer:
                                     sendEmail(to, content)
@@ -237,60 +258,35 @@ def run(query):
                                     speak('Okay')
                                 else:
                                     speak('No response going back')
-                            elif 'myself' in answer:
-                                speak("What should I say")
+                            else:
+                                speak(f"I'm sorry, {name} is not found in my contacts. Please provide their email address.")
+                                email = takeCommand().lower()
+                                emails[name] = email
+                                storeEmails(emails)
+                                speak(f"Email address for {name} has been added to my contacts. What should I say to {name}?")
                                 content = takeCommand()
-                                to = emails['myself']
-                                speak('Confirm me yes or no')
+                                speak("Confirm me yes or no")
                                 answer = takeCommand().lower()
                                 if 'yes' in answer:
-                                    sendEmail(to, content)
-                                    speak('Email has been sent!')
+                                     sendEmail(email, content)
+                                     speak("Email has been sent!")
                                 elif 'no' in answer:
-                                    speak('Okay')
+                                     speak('Okay')
                                 else:
-                                    speak('No response going back')
-                                    speak('No response going back')
-                            elif 'pranchal' in answer or 'pranjal' in answer:
-                                speak("What should I say")
-                                content = takeCommand()
-                                to = emails['pranchal']
-                                speak('Confirm me yes or no')
-                                answer = takeCommand().lower()
-                                if 'yes' in answer:
-                                    sendEmail(to, content)
-                                    speak('Email has been sent!')
-                                elif 'no' in answer:
-                                    speak('Okay')
-                                else:
-                                    speak('No response going back')
-                            elif 'vinita' in answer:
-                                speak("What should I say")
-                                content = takeCommand()
-                                to = emails['vinita']
-                                speak('Confirm me yes or no')
-                                answer = takeCommand().lower()
-                                if 'yes' in answer:
-                                    sendEmail(to, content)
-                                    speak('Email has been sent!')
-                                elif 'no' in answer:
-                                    speak('Okay')
-                                else:
-                                    speak('No response going back')
-
-                        except:
-                            speak('Sorry my friend. I am not able to send this email at this moment')  
-
+                                     speak("No response, going back")
+                        except Exception as e:
+                             speak("Sorry, I am not able to send this email at this moment.")
+                             print(e)                        
 #main function 
 if __name__ == '__main__':
-    pico_key= os.getenv("pico_key")
-    say = ['say/1.mp3', 'say/2.mp3', 'say/3.mp3', 'say/4.mp3']
+    #getting all the stored emails
+    emails = readEmails()
+    pico_key= os.getenv("pico_key") #getting pocuprine key
+    say = ['say/1.mp3', 'say/2.mp3', 'say/3.mp3', 'say/4.mp3'] 
     greet = ['1.mp3', '2.mp3']
     wishMe()
-
     #Greet
     os.system(f'mpg123 apsara_first_greet/{random.choice(greet)}')
-    
     porcupine = None
     audio_stream = None
     paudio = None
@@ -304,7 +300,6 @@ if __name__ == '__main__':
                 keyword = audio_stream.read(porcupine.frame_length)
                 keyword = struct.unpack_from("h" * porcupine.frame_length, keyword)
                 keyword_index = porcupine.process(keyword)
-                schedule.run_pending()
                 if (not ps.sensors_battery().power_plugged and int(ps.sensors_battery().percent) < 10):
                     speak('Sir Please charge me')
                     battery_flag = 1
