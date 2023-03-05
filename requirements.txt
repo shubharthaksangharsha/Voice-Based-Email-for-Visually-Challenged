@@ -5,3 +5,5 @@ schedule
 datefinder
 pvporcupine
 pyaudio
+python-dotenv
+playsound==1.2.2

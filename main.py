@@ -1,11 +1,10 @@
+#import required libraries
 from gtts import gTTS
 import traceback
 import speech_recognition as sr
 import psutil as ps
-import threading
 import os
 import time 
-import datefinder
 import datetime
 import struct
 import random
@@ -260,7 +259,8 @@ def run(query):
                                     speak('No response going back')
                             else:
                                 speak(f"I'm sorry, {name} is not found in my contacts. Please provide their email address.")
-                                email = takeCommand().lower()
+                                # email = takeCommand().lower()
+                                email = input(f'Please write the email of {name}: ')
                                 emails[name] = email
                                 storeEmails(emails)
                                 speak(f"Email address for {name} has been added to my contacts. What should I say to {name}?")
@@ -280,6 +280,7 @@ def run(query):
 #main function 
 if __name__ == '__main__':
     #getting all the stored emails
+    
     emails = readEmails()
     pico_key= os.getenv("pico_key") #getting pocuprine key
     say = ['say/1.mp3', 'say/2.mp3', 'say/3.mp3', 'say/4.mp3'] 
