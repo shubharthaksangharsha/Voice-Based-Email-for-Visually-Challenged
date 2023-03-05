@@ -1,0 +1,7 @@
+gtts
+SpeechRecognition
+psutil
+schedule
+datefinder
+pvporcupine
+pyaudio

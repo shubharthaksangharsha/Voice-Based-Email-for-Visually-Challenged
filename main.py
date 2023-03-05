@@ -3,9 +3,9 @@ import traceback
 import speech_recognition as sr
 import psutil as ps
 import threading
-from pulsectl import Pulse, PulseVolumeInfo
 import os
 import schedule
+import time 
 import datefinder
 import datetime
 import struct
@@ -13,15 +13,20 @@ import random
 import pvporcupine
 import pyaudio 
 import imaplib
+import webbrowser
 from email.message import EmailMessage
 import smtplib
 from email.mime import audio
 import email 
 from email.header import decode_header
+import json 
 
 
-emails = {'myself': 'shubharthaksangharsha@gmail.com', 'mummy': 'usharani20jan@gmail.com', 'bro': 'siddhant3s@gmail.com', 'bhabhi':'ahuja.chaks@gmail.com', 'pranchal': 'pranchal018@gmail.com', 'pranjal': 'pranchal018@gmail.com'}
+#getting all the stored emails
+with open('all_emails.json', 'r') as f:
+    emails = json.load(f)
 
+#converting text to speech 
 def speak(text):
     speech = gTTS(text=text, lang="en-in", slow=False)
     speech.save("text.mp3")
@@ -41,17 +46,17 @@ def wishMe():
         os.system('mpg123 wish_me/good_evening.mp3')
 
 
-#take command from the user
-def takeCommand():
+#take voice command from the user microphone and convert it into text 
+def takeCommand(pause_threshold = 0.6, timeout=5, phrase_time_limit=3):
     '''
     It takes microphone input from the user and returns string output
     '''
     r = sr.Recognizer()
     with sr.Microphone() as source:
         print("Listening...")
-        r.pause_threshold = 0.5
+        r.pause_threshold = pause_threshold
         try:
-            audio = r.listen(source,timeout=1,phrase_time_limit=2)
+            audio = r.listen(source,timeout=timeout,phrase_time_limit=phrase_time_limit)
             print("Recognizing...")
             query = r.recognize_google(audio, language='en-in')
             print(f"User said: {query}\n")
@@ -59,85 +64,13 @@ def takeCommand():
             print("Say that again please...")
             return "None"
     return query
-#for news
-def takeCommand2():
-    '''
-    It takes microphone input from the user and returns output
-    '''
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Listening...")
-        r.pause_threshold = 0.6
-        try:
-            audio = r.listen(source,phrase_time_limit=2, timeout = 6)
-            print("Recognizing...")
-            query = r.recognize_google(audio, language='en-in')
-            print(f"User said: {query}\n")
-        except Exception as e:
-            print("Say that again please")
-            return "exception"
-    return query
-    
-def takeCommand3():
-    '''
-    It takes microphone input from the user and returns string output
-    '''
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Listening...")
-        r.pause_threshold = 0.6
-        try:
-            audio = r.listen(source,phrase_time_limit=6, timeout = 6)
-            print("Recognizing...")
-            query = r.recognize_google(audio, language='en-in')
-            print(f"User said: {query}\n")
-        except Exception as e:
-            print("Say that again please")
-            return "exception"
-    return query
-def takeCommand4():
-    '''
-    It takes microphone input from the user and returns string output
-    '''
-    r = sr.Recognizer()
-    with sr.Microphone() as source:
-        print("Listening...")
-        r.pause_threshold = 0.6
-        try:
-            audio = r.listen(source,phrase_time_limit = 10,timeout = 10)
-            print("Recognizing...")
-            query = r.recognize_google(audio, language='en-in')
-            print(f"User said: {query}\n")
-        except Exception as e:
-            print("Say that again please")
-            return "exception"
-    return query
-def takeCommand5():
-    '''
-    It takes microphone input from the user and returns string output
-    '''
-    r = sr.Recognizer()
-    try:
-        with sr.Microphone() as source:
-            print('takeCommand5')
-            print("Listening...")
-            r.pause_threshold = 0.6
-            audio = r.listen(source,phrase_time_limit = 5,timeout = 3)
-            print("Recognizing...")
-            query = r.recognize_google(audio, language='en-in')
-            print(f"User said: {query}\n")
-    except Exception as e:
-            print("Say that again please")
-            print(e)
-            return ""
-    return query
 
 #sending mail 
 def sendEmail(to, content):
     username = os.environ.get('mymail')
     password = os.environ.get('myapp_pass2')
     msg = EmailMessage()
-    msg['Subject'] = 'Mail From Apsara AI'
+    msg['Subject'] = 'Mail From Voice Assistant'
     msg['From'] = username
     #msg['To'] = username
     msg['To'] = to
@@ -146,10 +79,10 @@ def sendEmail(to, content):
         smtp.login(username, password)
         smtp.send_message(msg)
         
-    
 def clean(text):
     # clean text for creating a folder
     return "".join(c if c.isalnum() else "_" for c in text)
+
 #reading email
 def read_unseen():
     flag = 0
@@ -190,16 +123,17 @@ def read_unseen():
                     From = From.decode(encoding)
                 print("Subject:", subject)
                 print("From:", From)
-                speak(str(index+1) + 'mail from : ' + From)
+                speak('mail from : ' + From)
                 speak('subject is ' + subject)
                 speak('Do you want me to continue reading')
-                answer = takeCommand3().lower()
+                answer = takeCommand().lower()
                 if 'nope' in answer or 'no' in answer:
                     speak('Okay')
                     flag = 1
                     break                    
                 # if the email message is multipart
                 if msg.is_multipart():
+                    print('********shubhi*******')
                     # iterate over email parts
                     for part in msg.walk():
                         # extract content type of email
@@ -209,8 +143,10 @@ def read_unseen():
                             # get the email body
                             body = part.get_payload(decode=True).decode()
                         except:
+                            print('no body found')
                             pass
                         if content_type == "text/plain" and "attachment" not in content_disposition:
+                            print('No attachment only plain texts')
                             pass
                         elif "attachment" in content_disposition:
                             # download attachment
@@ -225,6 +161,7 @@ def read_unseen():
                                 # download attachment and save it
                                 open(filepath, "wb").write(part.get_payload(decode=True))
                 else:
+                    print('********shubhi2*******')
                     # extract content type of email
                     content_type = msg.get_content_type()
                     # get the email body
@@ -232,6 +169,7 @@ def read_unseen():
                     if content_type == "text/plain":
                         # print only text email parts
                         print(body)
+                        speak("The mail contains")
                         speak(body)
                     if content_type == "text/html":
                         # if it's HTML, create a new HTML file and open it in browser
@@ -249,6 +187,13 @@ def read_unseen():
                         os.system(f'rm -rf {filepath}')
                         os.system(f'rmdir {folder_name}')
                     print("="*100)
+                speak('Do you want me to delete this mail')
+                answer = takeCommand().lower()
+                if 'yes' in answer or 'delete' in answer:
+                    imap.store(str(i), '+FLAGS', '\\Deleted')
+                    speak('Email deleted successfully')
+                    imap.expunge()
+                    continue
         if flag == 1:
             break
                 
@@ -256,10 +201,7 @@ def read_unseen():
     imap.close()
     imap.logout()
 
-
-
-
-
+#run function which triggers when wake word is detected
 def run(query):
     if 'read email' in query  or 'read mail' in query:
                         speak('Connecting to mail server')
@@ -268,13 +210,13 @@ def run(query):
     elif "send mail" in query or 'sendmail' in query:
                         try:
                             speak('To Who I should send this mail')
-                            answer = takeCommand2().lower()
+                            answer = takeCommand().lower()
                             if 'mummy' in answer:
                                 speak("What should I say")
-                                content = takeCommand2().lower()
+                                content = takeCommand().lower()
                                 to = emails['mummy']
                                 speak('Confirm me yes or no')
-                                answer = takeCommand2().lower()
+                                answer = takeCommand().lower()
                                 if 'yes' in answer:
                                     sendEmail(to, content)
                                     speak('Email has been sent!')
@@ -284,10 +226,10 @@ def run(query):
                                     speak('No response going back')
                             elif 'bro' in answer:
                                 speak("What should I say")
-                                content = takeCommand2()
+                                content = takeCommand()
                                 to = emails['bro']
                                 speak('Confirm me yes or no')
-                                answer = takeCommand2().lower()
+                                answer = takeCommand().lower()
                                 if 'yes' in answer:
                                     sendEmail(to, content)
                                     speak('Email has been sent!')
@@ -297,10 +239,10 @@ def run(query):
                                     speak('No response going back')
                             elif 'myself' in answer:
                                 speak("What should I say")
-                                content = takeCommand5()
+                                content = takeCommand()
                                 to = emails['myself']
                                 speak('Confirm me yes or no')
-                                answer = takeCommand2().lower()
+                                answer = takeCommand().lower()
                                 if 'yes' in answer:
                                     sendEmail(to, content)
                                     speak('Email has been sent!')
@@ -311,10 +253,10 @@ def run(query):
                                     speak('No response going back')
                             elif 'pranchal' in answer or 'pranjal' in answer:
                                 speak("What should I say")
-                                content = takeCommand5()
+                                content = takeCommand()
                                 to = emails['pranchal']
                                 speak('Confirm me yes or no')
-                                answer = takeCommand2().lower()
+                                answer = takeCommand().lower()
                                 if 'yes' in answer:
                                     sendEmail(to, content)
                                     speak('Email has been sent!')
@@ -322,12 +264,24 @@ def run(query):
                                     speak('Okay')
                                 else:
                                     speak('No response going back')
+                            elif 'vinita' in answer:
+                                speak("What should I say")
+                                content = takeCommand()
+                                to = emails['vinita']
+                                speak('Confirm me yes or no')
+                                answer = takeCommand().lower()
+                                if 'yes' in answer:
+                                    sendEmail(to, content)
+                                    speak('Email has been sent!')
+                                elif 'no' in answer:
+                                    speak('Okay')
+                                else:
+                                    speak('No response going back')
+
                         except:
                             speak('Sorry my friend. I am not able to send this email at this moment')  
 
-               
-
-
+#main function 
 if __name__ == '__main__':
     pico_key= os.getenv("pico_key")
     say = ['say/1.mp3', 'say/2.mp3', 'say/3.mp3', 'say/4.mp3']
@@ -364,7 +318,7 @@ if __name__ == '__main__':
                     os.system(f'mpg123 {random.choice(say)}')
                     # os.system(f'aplay output4.wav')
                     try:
-                        query = takeCommand5().lower()
+                        query = takeCommand().lower()
                     except:
                         print("exception occured!!")
                         pass
@@ -381,4 +335,3 @@ if __name__ == '__main__':
             audio_stream.close()
         if paudio is not None:
             paudio.terminate()   
-
