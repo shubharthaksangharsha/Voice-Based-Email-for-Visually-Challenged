@@ -228,6 +228,14 @@ def read_unseen():
     imap.close()
     imap.logout()
 
+
+#check battery 
+def check_battery():
+    if (ps.sensors_battery().power_plugged == True):
+        speak(f'{int(ps.sensors_battery().percent)} percent and Laptop is Charging')
+    else:
+        speak(f'{int(ps.sensors_battery().percent)} percent and Laptop is not Charging')
+
 #run function which triggers when wake word is detected
 def run(query):
     if 'read email' in query  or 'read mail' in query:
@@ -276,7 +284,10 @@ def run(query):
                                      speak("No response, going back")
                         except Exception as e:
                              speak("Sorry, I am not able to send this email at this moment.")
-                             print(e)                        
+                             print(e)   
+    #check battery 
+    if 'battery' in query:
+         check_battery()                     
 #main function 
 if __name__ == '__main__':
     #getting all the stored emails
